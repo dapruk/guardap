@@ -33,8 +33,7 @@ if (
 ```typescript
 // Fluent, readable, and type-safe
 if (
-  AccessGuard
-    .requireRole('admin')
+  Guard.requireRole('admin')
     .or()
     .requireRole('staff')
     .mustBe('isActive')
@@ -105,22 +104,53 @@ const Guard = createGuard<Roles, Features, Actions, Conditions, Groups>({
 });
 ```
 
-### Isomorphic Initialization
+### Core Logic
 
-Guardap is designed for both Client-Side (Sync) and Server-Side (Async) environments.
+The `Guard` instance provides a fluent builder for checking permissions.
 
-**`.with(context)`**
-This is the universal method to initialize a check chain. It accepts an optional context object that is passed to your `getUserState` function.
+**Synchronous Checks (Client)**
+```typescript
+// Uses default/global state
+const isAllowed = Guard.requireRole('admin')
+  .require('create').on('posts')
+  .allowed();
+```
 
-*   **Client-Side (Sync):** If `getUserState` returns a value directly, `.with()` returns a synchronous builder.
-*   **Server-Side (Async):** If `getUserState` returns a Promise, `.with()` returns an asynchronous builder.
+**Asynchronous Checks (Server)**
+```typescript
+// Injects request context
+const isAllowed = await Guard.with(context)
+  .requireRole('admin')
+  .allowedAsync();
+```
+
+**Complex Logic (.or)**
+```typescript
+Guard.requireRole('admin')    // Check A
+  .or()                       // OR
+  .requireRole('editor')      // (Check B
+  .mustBe('isVerified')       //  AND Check C)
+  .allowed();
+```
+
+### Initialization Patterns
+
+Guardap supports two initialization patterns depending on your environment.
+
+**1. Client-Side (Implicit Context)**
+In a client-side app (SPA), your user state is often global or retrieved from a store/hook. You don't need to pass context every time.
 
 ```typescript
-// Client: Sync check
-const isAllowed = AccessGuard.with(clientContext).requireRole('admin').allowed();
+// Config: getUserState uses global store or default logic
+const isAllowed = Guard.requireRole('admin').allowed();
+```
 
-// Server: Async check (must await .allowedAsync())
-const isAllowed = await AccessGuard.with(serverContext).requireRole('admin').allowedAsync();
+**2. Server-Side (Explicit Context)**
+In SSR or Middleware (Node/Next.js), state is request-scoped. Use `.with(context)` to inject the specific request context.
+
+```typescript
+// Config: getUserState(ctx) uses the passed context
+const isAllowed = await Guard.with(req).requireRole('admin').allowedAsync();
 ```
 
 ### The Fluent API
@@ -142,8 +172,7 @@ The `IGuardChain` interface provides a readable, sentence-like API.
 
 **Example: Branching Logic**
 ```typescript
-Guard.with(ctx)
-  .requireRole('admin')       // Branch 1
+Guard.requireRole('admin')    // Branch 1
   .or()                       // OR
   .requireRole('editor')      // Branch 2 (Start)
   .mustBe('isVerified')       // Branch 2 (Continue - AND)
@@ -196,21 +225,63 @@ Enable `suspense={true}` to let a parent `<Suspense>` boundary handle the loadin
 
 ### Router Drivers
 
-Guardap is router-agnostic. You can plug in any router (React Router, TanStack Router, Next.js) via a simple driver.
+Guardap comes with built-in drivers for popular routers.
 
+**React Router (v6+)**
 ```typescript
-// src/drivers/react-router.ts
 import { useNavigate } from 'react-router-dom';
+import { createReactRouterDriver } from 'guardap/drivers/react-router';
 
-// In your component or hook where you create the Guard (if using hooks)
-// Or pass a static driver if using a global router instance
+// Inside your component/hook
 const navigate = useNavigate();
 
 const Guard = createGuard({
   // ... config
   router: {
-    driver: (url) => navigate(url),
+    driver: createReactRouterDriver(navigate),
   },
 });
 ```
-*Note: For Next.js App Router, you would use `redirect()` from `next/navigation` in Server Components or `useRouter` in Client Components.*
+
+**TanStack Router**
+```typescript
+import { TanStackDriver } from 'guardap/drivers/tanstack';
+
+const Guard = createGuard({
+  // ... config
+  router: {
+    driver: TanStackDriver,
+  },
+});
+```
+
+**Other Routers (Next.js / Custom)**
+You can easily create a custom driver for any router.
+
+```typescript
+const Guard = createGuard({
+  // ... config
+  router: {
+    driver: (url) => {
+      // Your custom redirect logic
+      window.location.href = url; 
+    },
+  },
+});
+```
+
+## Contribution
+
+We welcome contributions! Please follow these steps:
+
+1.  **Fork** the repository.
+2.  **Clone** your fork: `git clone https://github.com/your-username/guardap.git`
+3.  **Install dependencies**: `pnpm install`
+4.  **Create a branch**: `git checkout -b feature/my-new-feature`
+5.  **Make changes** and run tests: `npm test`
+6.  **Commit** your changes: `git commit -m 'Add some feature'`
+7.  **Push** to the branch: `git push origin feature/my-new-feature`
+8.  **Submit a Pull Request**.
+
+Please ensure your code follows the existing style and includes tests for new features.
+
