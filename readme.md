@@ -33,7 +33,7 @@ if (
 ```typescript
 // Fluent, readable, and type-safe
 if (
-  Guard.requireRole('admin')
+  AccessGuard.requireRole('admin')
     .or()
     .requireRole('staff')
     .mustBe('isActive')
@@ -70,7 +70,7 @@ type Conditions = 'isVerified' | 'hasSubscription';
 type Groups = 'staff';
 
 // 2. Create the Guard Instance
-const Guard = createGuard<Roles, Features, Actions, Conditions, Groups>({
+const AccessGuard = createGuard<Roles, Features, Actions, Conditions, Groups>({
   // Map roles to permissions
   getPermissions: (roles) => {
     if (roles.includes('admin')) return { '*': '*' }; // Global Wildcard
@@ -106,12 +106,12 @@ const Guard = createGuard<Roles, Features, Actions, Conditions, Groups>({
 
 ### Core Logic
 
-The `Guard` instance provides a fluent builder for checking permissions.
+The `AccessGuard` instance provides a fluent builder for checking permissions.
 
 **Synchronous Checks (Client)**
 ```typescript
 // Uses default/global state
-const isAllowed = Guard.requireRole('admin')
+const isAllowed = AccessGuard.requireRole('admin')
   .require('create').on('posts')
   .allowed();
 ```
@@ -119,14 +119,14 @@ const isAllowed = Guard.requireRole('admin')
 **Asynchronous Checks (Server)**
 ```typescript
 // Injects request context
-const isAllowed = await Guard.with(context)
+const isAllowed = await AccessGuard.with(context)
   .requireRole('admin')
   .allowedAsync();
 ```
 
 **Complex Logic (.or)**
 ```typescript
-Guard.requireRole('admin')    // Check A
+AccessGuard.requireRole('admin')    // Check A
   .or()                       // OR
   .requireRole('editor')      // (Check B
   .mustBe('isVerified')       //  AND Check C)
@@ -142,7 +142,7 @@ In a client-side app (SPA), your user state is often global or retrieved from a 
 
 ```typescript
 // Config: getUserState uses global store or default logic
-const isAllowed = Guard.requireRole('admin').allowed();
+const isAllowed = AccessGuard.requireRole('admin').allowed();
 ```
 
 **2. Server-Side (Explicit Context)**
@@ -150,7 +150,7 @@ In SSR or Middleware (Node/Next.js), state is request-scoped. Use `.with(context
 
 ```typescript
 // Config: getUserState(ctx) uses the passed context
-const isAllowed = await Guard.with(req).requireRole('admin').allowedAsync();
+const isAllowed = await AccessGuard.with(req).requireRole('admin').allowedAsync();
 ```
 
 ### The Fluent API
@@ -172,7 +172,7 @@ The `IGuardChain` interface provides a readable, sentence-like API.
 
 **Example: Branching Logic**
 ```typescript
-Guard.requireRole('admin')    // Branch 1
+AccessGuard.requireRole('admin')    // Branch 1
   .or()                       // OR
   .requireRole('editor')      // Branch 2 (Start)
   .mustBe('isVerified')       // Branch 2 (Continue - AND)
@@ -187,7 +187,7 @@ Guardap provides a powerful React adapter with full TypeScript support.
 ```typescript
 // src/guard.ts
 import { createReactAccessGuard } from 'guardap/react';
-export const { AccessGuardProvider, AccessGuard, useAccessGuard } = createReactAccessGuard(Guard);
+export const { AccessGuardProvider, AccessGuard: GuardComponent, useAccessGuard } = createReactAccessGuard(AccessGuard);
 ```
 
 **2. Wrap your App**
@@ -199,17 +199,17 @@ export const { AccessGuardProvider, AccessGuard, useAccessGuard } = createReactA
 ```
 
 **3. Protect Components**
-The `AccessGuard` component accepts props that mirror the fluent API. All props are evaluated with **AND** logic.
+The `GuardComponent` (renamed from AccessGuard to avoid conflict) accepts props that mirror the fluent API. All props are evaluated with **AND** logic.
 
 ```tsx
-<AccessGuard
+<GuardComponent
   role={['admin', 'editor']} // OR logic within role array
   condition="isVerified"     // AND condition
   fallback={<ForbiddenPage />}
   loadingComponent={<Spinner />} // Shown during async checks
 >
   <ProtectedContent />
-</AccessGuard>
+</GuardComponent>
 ```
 
 **4. Suspense Support (Experimental)**
@@ -217,9 +217,9 @@ Enable `suspense={true}` to let a parent `<Suspense>` boundary handle the loadin
 
 ```tsx
 <Suspense fallback={<GlobalSkeleton />}>
-  <AccessGuard role="admin" suspense={true}>
+  <GuardComponent role="admin" suspense={true}>
     <AsyncProtectedContent />
-  </AccessGuard>
+  </GuardComponent>
 </Suspense>
 ```
 
@@ -235,7 +235,7 @@ import { createReactRouterDriver } from 'guardap/drivers/react-router';
 // Inside your component/hook
 const navigate = useNavigate();
 
-const Guard = createGuard({
+const AccessGuard = createGuard({
   // ... config
   router: {
     driver: createReactRouterDriver(navigate),
@@ -247,7 +247,7 @@ const Guard = createGuard({
 ```typescript
 import { TanStackDriver } from 'guardap/drivers/tanstack';
 
-const Guard = createGuard({
+const AccessGuard = createGuard({
   // ... config
   router: {
     driver: TanStackDriver,
@@ -259,7 +259,7 @@ const Guard = createGuard({
 You can easily create a custom driver for any router.
 
 ```typescript
-const Guard = createGuard({
+const AccessGuard = createGuard({
   // ... config
   router: {
     driver: (url) => {
