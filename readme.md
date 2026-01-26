@@ -225,21 +225,63 @@ Enable `suspense={true}` to let a parent `<Suspense>` boundary handle the loadin
 
 ### Router Drivers
 
-Guardap is router-agnostic. You can plug in any router (React Router, TanStack Router, Next.js) via a simple driver.
+Guardap comes with built-in drivers for popular routers.
 
+**React Router (v6+)**
 ```typescript
-// src/drivers/react-router.ts
 import { useNavigate } from 'react-router-dom';
+import { createReactRouterDriver } from 'guardap/drivers/react-router';
 
-// In your component or hook where you create the Guard (if using hooks)
-// Or pass a static driver if using a global router instance
+// Inside your component/hook
 const navigate = useNavigate();
 
 const Guard = createGuard({
   // ... config
   router: {
-    driver: (url) => navigate(url),
+    driver: createReactRouterDriver(navigate),
   },
 });
 ```
-*Note: For Next.js App Router, you would use `redirect()` from `next/navigation` in Server Components or `useRouter` in Client Components.*
+
+**TanStack Router**
+```typescript
+import { TanStackDriver } from 'guardap/drivers/tanstack';
+
+const Guard = createGuard({
+  // ... config
+  router: {
+    driver: TanStackDriver,
+  },
+});
+```
+
+**Other Routers (Next.js / Custom)**
+You can easily create a custom driver for any router.
+
+```typescript
+const Guard = createGuard({
+  // ... config
+  router: {
+    driver: (url) => {
+      // Your custom redirect logic
+      window.location.href = url; 
+    },
+  },
+});
+```
+
+## Contribution
+
+We welcome contributions! Please follow these steps:
+
+1.  **Fork** the repository.
+2.  **Clone** your fork: `git clone https://github.com/your-username/guardap.git`
+3.  **Install dependencies**: `pnpm install`
+4.  **Create a branch**: `git checkout -b feature/my-new-feature`
+5.  **Make changes** and run tests: `npm test`
+6.  **Commit** your changes: `git commit -m 'Add some feature'`
+7.  **Push** to the branch: `git push origin feature/my-new-feature`
+8.  **Submit a Pull Request**.
+
+Please ensure your code follows the existing style and includes tests for new features.
+
