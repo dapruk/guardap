@@ -1,0 +1,77 @@
+{
+  "name": "guardap",
+  "version": "1.0.0",
+  "description": "Fluent, isomorphic, router-agnostic access control library",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./drivers/tanstack": {
+      "import": "./dist/drivers/tanstack.mjs",
+      "require": "./dist/drivers/tanstack.js",
+      "types": "./dist/drivers/tanstack.d.ts"
+    },
+    "./drivers/react-router": {
+      "import": "./dist/drivers/react-router.mjs",
+      "require": "./dist/drivers/react-router.js",
+      "types": "./dist/drivers/react-router.d.ts"
+    },
+    "./react": {
+      "import": "./dist/react/index.mjs",
+      "require": "./dist/react/index.js",
+      "types": "./dist/react/index.d.ts"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "dev": "tsup --watch",
+    "build": "tsup",
+    "test": "vitest",
+    "format": "prettier --write \"src/**/*.ts\" \"src/**/*.tsx\" \"tests/**/*.ts\"",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "auth",
+    "rbac",
+    "guard",
+    "access-control",
+    "react",
+    "typescript"
+  ],
+  "author": "Syahrul Daffa Mahesa <github.com/dapruk>",
+  "license": "MIT",
+  "peerDependencies": {
+    "@tanstack/react-router": ">=1.0.0",
+    "react": ">=16.8.0",
+    "react-dom": ">=16.8.0",
+    "react-router-dom": ">=6.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@tanstack/react-router": {
+      "optional": true
+    },
+    "react-router-dom": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@testing-library/react": "^16.3.2",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "jsdom": "^27.4.0",
+    "prettier": "^3.8.1",
+    "prettier-plugin-organize-imports": "^4.3.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "tsup": "^8.5.1",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.18"
+  }
+}
