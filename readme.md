@@ -33,7 +33,7 @@ if (
 ```typescript
 // Fluent, readable, and type-safe
 if (
-  Guard.with(context)
+  AccessGuard
     .requireRole('admin')
     .or()
     .requireRole('staff')
@@ -117,10 +117,10 @@ This is the universal method to initialize a check chain. It accepts an optional
 
 ```typescript
 // Client: Sync check
-const isAllowed = Guard.with(clientContext).requireRole('admin').allowed();
+const isAllowed = AccessGuard.with(clientContext).requireRole('admin').allowed();
 
 // Server: Async check (must await .allowedAsync())
-const isAllowed = await Guard.with(serverContext).requireRole('admin').allowedAsync();
+const isAllowed = await AccessGuard.with(serverContext).requireRole('admin').allowedAsync();
 ```
 
 ### The Fluent API
