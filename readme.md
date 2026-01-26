@@ -33,8 +33,7 @@ if (
 ```typescript
 // Fluent, readable, and type-safe
 if (
-  Guard.with(context)
-    .requireRole('admin')
+  Guard.requireRole('admin')
     .or()
     .requireRole('staff')
     .mustBe('isActive')
@@ -105,22 +104,53 @@ const Guard = createGuard<Roles, Features, Actions, Conditions, Groups>({
 });
 ```
 
-### Isomorphic Initialization
+### Core Logic
 
-Guardap is designed for both Client-Side (Sync) and Server-Side (Async) environments.
+The `Guard` instance provides a fluent builder for checking permissions.
 
-**`.with(context)`**
-This is the universal method to initialize a check chain. It accepts an optional context object that is passed to your `getUserState` function.
+**Synchronous Checks (Client)**
+```typescript
+// Uses default/global state
+const isAllowed = Guard.requireRole('admin')
+  .require('create').on('posts')
+  .allowed();
+```
 
-*   **Client-Side (Sync):** If `getUserState` returns a value directly, `.with()` returns a synchronous builder.
-*   **Server-Side (Async):** If `getUserState` returns a Promise, `.with()` returns an asynchronous builder.
+**Asynchronous Checks (Server)**
+```typescript
+// Injects request context
+const isAllowed = await Guard.with(context)
+  .requireRole('admin')
+  .allowedAsync();
+```
+
+**Complex Logic (.or)**
+```typescript
+Guard.requireRole('admin')    // Check A
+  .or()                       // OR
+  .requireRole('editor')      // (Check B
+  .mustBe('isVerified')       //  AND Check C)
+  .allowed();
+```
+
+### Initialization Patterns
+
+Guardap supports two initialization patterns depending on your environment.
+
+**1. Client-Side (Implicit Context)**
+In a client-side app (SPA), your user state is often global or retrieved from a store/hook. You don't need to pass context every time.
 
 ```typescript
-// Client: Sync check
-const isAllowed = Guard.with(clientContext).requireRole('admin').allowed();
+// Config: getUserState uses global store or default logic
+const isAllowed = Guard.requireRole('admin').allowed();
+```
 
-// Server: Async check (must await .allowedAsync())
-const isAllowed = await Guard.with(serverContext).requireRole('admin').allowedAsync();
+**2. Server-Side (Explicit Context)**
+In SSR or Middleware (Node/Next.js), state is request-scoped. Use `.with(context)` to inject the specific request context.
+
+```typescript
+// Config: getUserState(ctx) uses the passed context
+const isAllowed = await Guard.with(req).requireRole('admin').allowedAsync();
 ```
 
 ### The Fluent API
@@ -142,8 +172,7 @@ The `IGuardChain` interface provides a readable, sentence-like API.
 
 **Example: Branching Logic**
 ```typescript
-Guard.with(ctx)
-  .requireRole('admin')       // Branch 1
+Guard.requireRole('admin')    // Branch 1
   .or()                       // OR
   .requireRole('editor')      // Branch 2 (Start)
   .mustBe('isVerified')       // Branch 2 (Continue - AND)
