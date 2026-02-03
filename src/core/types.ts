@@ -69,6 +69,7 @@ export interface GuardConfig<
   redirects?: Record<string, string>;
   defaultRedirect?: string;
   groups?: Record<TGroup, TRole[]>;
+  debug?: boolean;
 }
 
 export interface GuardContext<
