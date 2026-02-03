@@ -5,6 +5,7 @@ export default defineConfig({
     'src/index.ts',
     'src/drivers/tanstack.ts',
     'src/drivers/react-router.ts',
+    'src/react/index.tsx',
   ],
   format: ['cjs', 'esm'],
   dts: true,

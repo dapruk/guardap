@@ -15,24 +15,24 @@
   },
   "exports": {
     ".": {
+      "types": "./dist/index.d.ts",
       "import": "./dist/index.mjs",
-      "require": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "require": "./dist/index.js"
     },
     "./drivers/tanstack": {
+      "types": "./dist/drivers/tanstack.d.ts",
       "import": "./dist/drivers/tanstack.mjs",
-      "require": "./dist/drivers/tanstack.js",
-      "types": "./dist/drivers/tanstack.d.ts"
+      "require": "./dist/drivers/tanstack.js"
     },
     "./drivers/react-router": {
+      "types": "./dist/drivers/react-router.d.ts",
       "import": "./dist/drivers/react-router.mjs",
-      "require": "./dist/drivers/react-router.js",
-      "types": "./dist/drivers/react-router.d.ts"
+      "require": "./dist/drivers/react-router.js"
     },
     "./react": {
+      "types": "./dist/react/index.d.ts",
       "import": "./dist/react/index.mjs",
-      "require": "./dist/react/index.js",
-      "types": "./dist/react/index.d.ts"
+      "require": "./dist/react/index.js"
     }
   },
   "files": [
