@@ -75,6 +75,12 @@ export class GuardBuilder<
     return this;
   }
 
+  private logRejection(reason: string, details?: any) {
+    if (this.config.debug) {
+      console.warn(`[Guardap] Rejected: ${reason}`, details || '');
+    }
+  }
+
   requireRole(role: TRole | TRole[] | readonly TRole[]): this {
     if (this.promise) return this.enqueue((b) => b.requireRole(role as any)); // cast needed for strict overload compat in callback
     if (this.shouldSkipCheck()) return this;
@@ -83,7 +89,13 @@ export class GuardBuilder<
     const hasRole = this.context!.roles.some((asked) =>
       requiredRoles.includes(asked),
     );
-    if (!hasRole) this.isAllowed = false;
+    if (!hasRole) {
+      this.isAllowed = false;
+      this.logRejection(`Missing role`, {
+        required: requiredRoles,
+        current: this.context!.roles,
+      });
+    }
     return this;
   }
 
@@ -94,6 +106,7 @@ export class GuardBuilder<
     const groupConfig = this.config.groups;
     if (!groupConfig) {
       this.isAllowed = false;
+      this.logRejection('Group config missing');
       return this;
     }
 
@@ -113,28 +126,43 @@ export class GuardBuilder<
     const hasRole = this.context!.roles.some((askedRoles) =>
       allowedRoles.has(askedRoles),
     );
-    if (!hasRole) this.isAllowed = false;
+    if (!hasRole) {
+      this.isAllowed = false;
+      this.logRejection(`Missing group role`, {
+        groups: groupsToCheck,
+        current: this.context!.roles,
+      });
+    }
     return this;
   }
 
   requireLogin(): this {
     if (this.promise) return this.enqueue((b) => b.requireLogin());
     if (this.shouldSkipCheck()) return this;
-    if (!this.context!.isAuthenticated) this.isAllowed = false;
+    if (!this.context!.isAuthenticated) {
+      this.isAllowed = false;
+      this.logRejection('Unauthenticated');
+    }
     return this;
   }
 
   guestOnly(): this {
     if (this.promise) return this.enqueue((b) => b.guestOnly());
     if (this.shouldSkipCheck()) return this;
-    if (this.context!.isAuthenticated) this.isAllowed = false;
+    if (this.context!.isAuthenticated) {
+      this.isAllowed = false;
+      this.logRejection('Authenticated user (Guest only)');
+    }
     return this;
   }
 
   mustBe(conditions: TCondition): this {
     if (this.promise) return this.enqueue((b) => b.mustBe(conditions));
     if (this.shouldSkipCheck()) return this;
-    if (this.context!.conditions[conditions] !== true) this.isAllowed = false;
+    if (this.context!.conditions[conditions] !== true) {
+      this.isAllowed = false;
+      this.logRejection(`Condition not met: ${conditions}`);
+    }
     return this;
   }
 
@@ -163,12 +191,14 @@ export class GuardBuilder<
 
         if (!userPermissions) {
           this.isAllowed = false;
+          this.logRejection(`No permissions for feature: ${feature}`);
           return this;
         }
 
         const resolver = this.config.resolveAction;
         if (!resolver) {
           this.isAllowed = false;
+          this.logRejection('No action resolver configured');
           return this;
         }
 
@@ -179,6 +209,10 @@ export class GuardBuilder<
 
         if (!hasPerm) {
           this.isAllowed = false;
+          this.logRejection(`Missing permission: ${action} on ${feature}`, {
+            required: reqCode,
+            current: userPermissions,
+          });
         }
 
         return this;
