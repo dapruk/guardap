@@ -45,8 +45,19 @@ export function createGuard<
   TAction extends string,
   TCondition extends string = string,
   TGroup extends string = string,
+  TData = any,
   TContext = any,
->(config: GuardConfig<TRole, TFeature, TAction, TCondition, TGroup, TContext>) {
+>(
+  config: GuardConfig<
+    TRole,
+    TFeature,
+    TAction,
+    TCondition,
+    TGroup,
+    TData,
+    TContext
+  >,
+) {
   const finalResolveAction = config.resolveAction || defaultResolver;
   const finalConfig = { ...config, resolveAction: finalResolveAction };
 
@@ -64,13 +75,14 @@ export function createGuard<
           conditions: userState.conditions,
           permissions,
           isAuthenticated,
+          data: userState,
         };
       });
 
       return new GuardBuilder(finalConfig, contextPromise);
     }
 
-    const userState = userStateOrPromise as UserState<TRole, TCondition>;
+    const userState = userStateOrPromise as UserState<TRole, TCondition, TData>;
     const permissions = finalConfig.getPermissions(userState.roles);
 
     // Auto-detect authentication status:
@@ -84,6 +96,7 @@ export function createGuard<
       conditions: userState.conditions,
       permissions,
       isAuthenticated,
+      data: userState,
     });
   };
 

@@ -12,9 +12,15 @@ export interface IGuardChain<
   TAction extends string,
   TCondition extends string,
   TGroup extends string,
+  TData = any,
 > {
-  requireRole(role: TRole | TRole[]): this;
-  requireGroup(group: TGroup | TGroup[]): this;
+  // Method Overloading for strict typing
+  requireRole(role: TRole): this;
+  requireRole(roles: TRole[] | readonly TRole[]): this;
+
+  requireGroup(group: TGroup): this;
+  requireGroup(groups: TGroup[] | readonly TGroup[]): this;
+
   requireLogin(): this;
   guestOnly(): this;
   mustBe(condition: TCondition): this;
@@ -22,7 +28,7 @@ export interface IGuardChain<
   require(action: TAction): {
     on: (
       feature: TFeature,
-    ) => IGuardChain<TRole, TFeature, TAction, TCondition, TGroup>;
+    ) => IGuardChain<TRole, TFeature, TAction, TCondition, TGroup, TData>;
   };
 
   or(): this;
@@ -33,11 +39,15 @@ export interface IGuardChain<
   allowedAsync(): Promise<boolean>;
 }
 
-export type UserState<TRole extends string, TCondition extends string> = {
+export type UserState<
+  TRole extends string,
+  TCondition extends string,
+  TData = any,
+> = {
   roles: TRole[];
   conditions: Partial<Record<TCondition, boolean>>;
   isAuthenticated?: boolean;
-};
+} & TData;
 
 export interface GuardConfig<
   TRole extends string,
@@ -45,13 +55,16 @@ export interface GuardConfig<
   TAction extends string,
   TCondition extends string,
   TGroup extends string,
+  TData = any,
   TContext = any,
 > {
   resolveAction?: (action: TAction) => string;
   getPermissions: (roles: TRole[]) => PermissionMatrix<TFeature>;
   getUserState: (
     ctx?: TContext,
-  ) => UserState<TRole, TCondition> | Promise<UserState<TRole, TCondition>>;
+  ) =>
+    | UserState<TRole, TCondition, TData>
+    | Promise<UserState<TRole, TCondition, TData>>;
   router?: { driver?: RouterDriver };
   redirects?: Record<string, string>;
   defaultRedirect?: string;
@@ -62,9 +75,11 @@ export interface GuardContext<
   TRole,
   TFeature extends string,
   TCondition extends string,
+  TData = any,
 > {
   roles: TRole[];
   permissions: PermissionMatrix<TFeature>;
   conditions: Partial<Record<TCondition, boolean>>;
   isAuthenticated: boolean;
+  data: TData;
 }
