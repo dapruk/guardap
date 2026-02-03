@@ -6,24 +6,34 @@ export class GuardBuilder<
   TAction extends string,
   TCondition extends string,
   TGroup extends string,
-> implements IGuardChain<TRole, TFeature, TAction, TCondition, TGroup> {
-  private config: GuardConfig<TRole, TFeature, TAction, TCondition, TGroup>;
-  private context: GuardContext<TRole, TFeature, TCondition> | null = null;
-  private promise: Promise<GuardContext<TRole, TFeature, TCondition>> | null =
+  TData = any,
+> implements IGuardChain<TRole, TFeature, TAction, TCondition, TGroup, TData> {
+  private config: GuardConfig<
+    TRole,
+    TFeature,
+    TAction,
+    TCondition,
+    TGroup,
+    TData
+  >;
+  private context: GuardContext<TRole, TFeature, TCondition, TData> | null =
     null;
+  private promise: Promise<
+    GuardContext<TRole, TFeature, TCondition, TData>
+  > | null = null;
 
   private isAllowed: boolean = true;
   private wasPreviouslyAllowed: boolean = false;
 
   private asyncOps: ((
-    builder: GuardBuilder<TRole, TFeature, TAction, TCondition, TGroup>,
+    builder: GuardBuilder<TRole, TFeature, TAction, TCondition, TGroup, TData>,
   ) => void)[] = [];
 
   constructor(
-    config: GuardConfig<TRole, TFeature, TAction, TCondition, TGroup>,
+    config: GuardConfig<TRole, TFeature, TAction, TCondition, TGroup, TData>,
     contextOrPromise:
-      | GuardContext<TRole, TFeature, TCondition>
-      | Promise<GuardContext<TRole, TFeature, TCondition>>,
+      | GuardContext<TRole, TFeature, TCondition, TData>
+      | Promise<GuardContext<TRole, TFeature, TCondition, TData>>,
   ) {
     this.config = config;
     if (contextOrPromise instanceof Promise) {
@@ -39,7 +49,14 @@ export class GuardBuilder<
 
   private enqueue(
     op: (
-      builder: GuardBuilder<TRole, TFeature, TAction, TCondition, TGroup>,
+      builder: GuardBuilder<
+        TRole,
+        TFeature,
+        TAction,
+        TCondition,
+        TGroup,
+        TData
+      >,
     ) => void,
   ): this {
     this.asyncOps.push(op);
@@ -58,8 +75,8 @@ export class GuardBuilder<
     return this;
   }
 
-  requireRole(role: TRole | TRole[]): this {
-    if (this.promise) return this.enqueue((b) => b.requireRole(role));
+  requireRole(role: TRole | TRole[] | readonly TRole[]): this {
+    if (this.promise) return this.enqueue((b) => b.requireRole(role as any)); // cast needed for strict overload compat in callback
     if (this.shouldSkipCheck()) return this;
 
     const requiredRoles = Array.isArray(role) ? role : [role];
@@ -70,8 +87,8 @@ export class GuardBuilder<
     return this;
   }
 
-  requireGroup(group: TGroup | TGroup[]): this {
-    if (this.promise) return this.enqueue((b) => b.requireGroup(group));
+  requireGroup(group: TGroup | TGroup[] | readonly TGroup[]): this {
+    if (this.promise) return this.enqueue((b) => b.requireGroup(group as any));
     if (this.shouldSkipCheck()) return this;
 
     const groupConfig = this.config.groups;
@@ -80,12 +97,17 @@ export class GuardBuilder<
       return this;
     }
 
-    const groupsToCheck = Array.isArray(group) ? group : [group];
+    const groupsToCheck: readonly TGroup[] = Array.isArray(group)
+      ? group
+      : [group as TGroup];
+
     const allowedRoles = new Set<string>();
 
     for (const g of groupsToCheck) {
       const roles = groupConfig[g];
-      if (roles) roles.forEach((askedRoles) => allowedRoles.add(askedRoles));
+      if (roles) {
+        roles.forEach((askedRoles: string) => allowedRoles.add(askedRoles));
+      }
     }
 
     const hasRole = this.context!.roles.some((askedRoles) =>
@@ -118,7 +140,9 @@ export class GuardBuilder<
 
   require(action: TAction) {
     return {
-      on: (feature: TFeature): this => {
+      on: (
+        feature: TFeature,
+      ): IGuardChain<TRole, TFeature, TAction, TCondition, TGroup, TData> => {
         if (this.promise) {
           this.enqueue((b) => {
             b.require(action).on(feature);
@@ -176,10 +200,8 @@ export class GuardBuilder<
 
     const resolvedContext = await this.promise;
 
-    // Create a new synchronous builder with the resolved context
     const syncBuilder = new GuardBuilder(this.config, resolvedContext);
 
-    // Replay all queued operations
     for (const op of this.asyncOps) {
       op(syncBuilder);
     }
