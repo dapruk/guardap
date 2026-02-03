@@ -101,6 +101,9 @@ const AccessGuard = createGuard<Roles, Features, Actions, Conditions, Groups>({
   
   // Optional: Custom Action Resolver (Default: first char, e.g. 'create' -> 'c')
   resolveAction: (action) => action[0], 
+
+  // Optional: Enable Debug Mode to log permission rejections to console
+  debug: true,
 });
 ```
 
@@ -183,43 +186,54 @@ AccessGuard.requireRole('admin')    // Branch 1
 
 Guardap provides a powerful React adapter with full TypeScript support.
 
-**1. Create the Component**
+**1. Create the Instance**
 ```typescript
 // src/guard.ts
-import { createReactAccessGuard } from 'guardap/react';
-export const { AccessGuardProvider, AccessGuard: GuardComponent, useAccessGuard } = createReactAccessGuard(AccessGuard);
+import { createGuard } from 'guardap/react';
+
+// Create your guard and export the bound components
+export const { GuardProvider, AccessGuard, useGuard, withAuth } = createGuard(config);
 ```
 
 **2. Wrap your App**
 ```tsx
 // src/App.tsx
-<AccessGuardProvider>
+import { GuardProvider } from './guard';
+
+<GuardProvider>
   <AppContent />
-</AccessGuardProvider>
+</GuardProvider>
 ```
 
-**3. Protect Components**
-The `GuardComponent` (renamed from AccessGuard to avoid conflict) accepts props that mirror the fluent API. All props are evaluated with **AND** logic.
+**3. Protect Components (AccessGuard)**
+The `AccessGuard` component accepts props that mirror the fluent API. All props are evaluated with **AND** logic.
 
 ```tsx
-<GuardComponent
+<AccessGuard
   role={['admin', 'editor']} // OR logic within role array
   condition="isVerified"     // AND condition
   fallback={<ForbiddenPage />}
   loadingComponent={<Spinner />} // Shown during async checks
 >
   <ProtectedContent />
-</GuardComponent>
+</AccessGuard>
 ```
 
-**4. Suspense Support (Experimental)**
+**4. Protect Components (HOC)**
+Wrap components directly using `withAuth`.
+
+```tsx
+const AdminPanel = withAuth(Dashboard, { role: 'admin' });
+```
+
+**5. Suspense Support (Experimental)**
 Enable `suspense={true}` to let a parent `<Suspense>` boundary handle the loading state.
 
 ```tsx
 <Suspense fallback={<GlobalSkeleton />}>
-  <GuardComponent role="admin" suspense={true}>
+  <AccessGuard role="admin" suspense={true}>
     <AsyncProtectedContent />
-  </GuardComponent>
+  </AccessGuard>
 </Suspense>
 ```
 
