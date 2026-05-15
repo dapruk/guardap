@@ -57,7 +57,7 @@ pnpm add guardap
 
 ### Core Configuration
 
-The `createGuard` factory is the entry point. It accepts 5 generic types to enforce strict type safety across your application.
+The `createGuard` factory is the entry point. It accepts generic types to enforce strict type safety across your application, including an optional route-path union for typed redirects.
 
 ```typescript
 import { createGuard } from 'guardap';
@@ -68,9 +68,18 @@ type Features = 'posts' | 'settings';
 type Actions = 'create' | 'read' | 'update' | 'delete';
 type Conditions = 'isVerified' | 'hasSubscription';
 type Groups = 'staff';
+type RoutePaths = '/' | '/login' | '/posts' | '/settings';
 
 // 2. Create the Guard Instance
-const AccessGuard = createGuard<Roles, Features, Actions, Conditions, Groups>({
+const AccessGuard = createGuard<
+  Roles,
+  Features,
+  Actions,
+  Conditions,
+  Groups,
+  unknown,
+  RoutePaths
+>({
   // Map roles to permissions
   getPermissions: (roles) => {
     if (roles.includes('admin')) return { '*': '*' }; // Global Wildcard
@@ -104,6 +113,9 @@ const AccessGuard = createGuard<Roles, Features, Actions, Conditions, Groups>({
 
   // Optional: Enable Debug Mode to log permission rejections to console
   debug: true,
+
+  // Optional: typed redirect target
+  defaultRedirect: '/login',
 });
 ```
 
@@ -171,7 +183,7 @@ The `IGuardChain` interface provides a readable, sentence-like API.
 | `.or()` | **Logic Switcher**. Snapshots the current chain result and resets for a new branch. (A || B). |
 | `.allowed()` | **Terminal**. Returns `boolean`. Throws error if the chain is async. |
 | `.allowedAsync()` | **Terminal**. Returns `Promise<boolean>`. Works for both sync and async chains. |
-| `.redirect(to?)` | **Terminal**. Triggers the configured router driver if access is denied. |
+| `.redirect(to?)` | **Terminal**. Triggers the configured router driver if access is denied. The `to` argument can be typed with an app route union. |
 
 **Example: Branching Logic**
 ```typescript
@@ -244,29 +256,144 @@ Guardap comes with built-in drivers for popular routers.
 **React Router (v6+)**
 ```typescript
 import { useNavigate } from 'react-router-dom';
-import { createReactRouterDriver } from 'guardap/drivers/react-router';
+import {
+  createReactRouterDriver,
+  defineReactRouterPaths,
+} from 'guardap/drivers/react-router';
+import type { ReactRouterGuardHandle } from 'guardap/drivers/react-router';
+
+const routePaths = defineReactRouterPaths([
+  '/',
+  '/login',
+  '/dashboard',
+  '/posts',
+  '/posts/:postId',
+] as const);
+
+type AppRoutePath = (typeof routePaths)[number];
 
 // Inside your component/hook
 const navigate = useNavigate();
 
-const AccessGuard = createGuard({
+const AccessGuard = createGuard<
+  AppRole,
+  AppFeature,
+  AppAction,
+  AppCondition,
+  AppGroup,
+  unknown,
+  AppRoutePath
+>({
   // ... config
   router: {
-    driver: createReactRouterDriver(navigate),
+    driver: createReactRouterDriver<AppRoutePath>(navigate),
   },
+  defaultRedirect: '/login',
 });
+
+AccessGuard.requireLogin().redirect('/login'); // ok
+// AccessGuard.requireLogin().redirect('/wrong-path'); // type error
+
+const postsRoute = {
+  path: '/posts',
+  element: <PostsPage />,
+  handle: {
+    guard: {
+      login: true,
+      feature: 'posts',
+      action: 'read',
+    },
+  } satisfies ReactRouterGuardHandle<
+    AppRole,
+    AppFeature,
+    AppAction,
+    AppCondition,
+    AppGroup,
+    AppRoutePath
+  >,
+};
 ```
 
 **TanStack Router**
 ```typescript
+import { createFileRoute } from '@tanstack/react-router';
 import { TanStackDriver } from 'guardap/drivers/tanstack';
+import type { TanStackGuardStaticData } from 'guardap/drivers/tanstack';
 
-const AccessGuard = createGuard({
+type AppRoutePath = '/' | '/login' | '/dashboard' | '/posts' | '/posts/$postId';
+
+const AccessGuard = createGuard<
+  AppRole,
+  AppFeature,
+  AppAction,
+  AppCondition,
+  AppGroup,
+  unknown,
+  AppRoutePath
+>({
   // ... config
   router: {
     driver: TanStackDriver,
   },
+  defaultRedirect: '/login',
 });
+
+export const Route = createFileRoute('/posts')({
+  staticData: {
+    guard: {
+      login: true,
+      feature: 'posts',
+      action: 'read',
+    },
+  } satisfies TanStackGuardStaticData<
+    AppRole,
+    AppFeature,
+    AppAction,
+    AppCondition,
+    AppGroup,
+    AppRoutePath
+  >,
+  component: PostsPage,
+});
+```
+
+Route metadata is typed metadata only. Guardap does not take over your router, loaders, or navigation lifecycle. Your app can read `handle.guard` or `staticData.guard`, apply it with Guardap's fluent guard, and then decide how to redirect or render.
+
+For strict redirect map keys and values, use the shared helper:
+
+```typescript
+import { defineGuardRedirects } from 'guardap';
+
+const redirects = defineGuardRedirects<AppRoutePath>()({
+  '/': '/dashboard',
+  '/posts': '/login',
+});
+
+createGuard<
+  AppRole,
+  AppFeature,
+  AppAction,
+  AppCondition,
+  AppGroup,
+  unknown,
+  AppRoutePath
+>({
+  // ... config
+  defaultRedirect: '/login',
+  redirects,
+});
+```
+
+For simple integration code, the router drivers also export helper aliases:
+
+```typescript
+import { evaluateReactRouterGuard } from 'guardap/drivers/react-router';
+import { evaluateTanStackGuard } from 'guardap/drivers/tanstack';
+
+const allowed = await evaluateReactRouterGuard(
+  AccessGuard,
+  postsRoute.handle.guard,
+);
 ```
 
 **Other Routers (Next.js / Custom)**
@@ -298,4 +425,3 @@ We welcome contributions! Please follow these steps:
 8.  **Submit a Pull Request**.
 
 Please ensure your code follows the existing style and includes tests for new features.
-
