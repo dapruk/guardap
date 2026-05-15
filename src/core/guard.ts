@@ -7,14 +7,24 @@ export class GuardBuilder<
   TCondition extends string,
   TGroup extends string,
   TData = any,
-> implements IGuardChain<TRole, TFeature, TAction, TCondition, TGroup, TData> {
+  TRoutePath extends string = string,
+> implements IGuardChain<
+  TRole,
+  TFeature,
+  TAction,
+  TCondition,
+  TGroup,
+  TData,
+  TRoutePath
+> {
   private config: GuardConfig<
     TRole,
     TFeature,
     TAction,
     TCondition,
     TGroup,
-    TData
+    TData,
+    TRoutePath
   >;
   private context: GuardContext<TRole, TFeature, TCondition, TData> | null =
     null;
@@ -26,11 +36,27 @@ export class GuardBuilder<
   private wasPreviouslyAllowed: boolean = false;
 
   private asyncOps: ((
-    builder: GuardBuilder<TRole, TFeature, TAction, TCondition, TGroup, TData>,
+    builder: GuardBuilder<
+      TRole,
+      TFeature,
+      TAction,
+      TCondition,
+      TGroup,
+      TData,
+      TRoutePath
+    >,
   ) => void)[] = [];
 
   constructor(
-    config: GuardConfig<TRole, TFeature, TAction, TCondition, TGroup, TData>,
+    config: GuardConfig<
+      TRole,
+      TFeature,
+      TAction,
+      TCondition,
+      TGroup,
+      TData,
+      TRoutePath
+    >,
     contextOrPromise:
       | GuardContext<TRole, TFeature, TCondition, TData>
       | Promise<GuardContext<TRole, TFeature, TCondition, TData>>,
@@ -55,7 +81,8 @@ export class GuardBuilder<
         TAction,
         TCondition,
         TGroup,
-        TData
+        TData,
+        TRoutePath
       >,
     ) => void,
   ): this {
@@ -170,7 +197,15 @@ export class GuardBuilder<
     return {
       on: (
         feature: TFeature,
-      ): IGuardChain<TRole, TFeature, TAction, TCondition, TGroup, TData> => {
+      ): IGuardChain<
+        TRole,
+        TFeature,
+        TAction,
+        TCondition,
+        TGroup,
+        TData,
+        TRoutePath
+      > => {
         if (this.promise) {
           this.enqueue((b) => {
             b.require(action).on(feature);
@@ -243,7 +278,7 @@ export class GuardBuilder<
     return syncBuilder.allowed();
   }
 
-  redirect(to?: string): void {
+  redirect(to?: TRoutePath): void {
     if (this.promise) {
       console.warn(
         '[Guardap] .redirect() is ignored in async mode. Handle redirection manually after await .allowedAsync()',
@@ -258,11 +293,15 @@ export class GuardBuilder<
       return;
     }
 
-    let targetUrl = to || this.config.defaultRedirect || '/';
-    if (this.config.redirects && this.config.redirects[targetUrl]) {
-      targetUrl = this.config.redirects[targetUrl];
+    let targetUrl = (to || this.config.defaultRedirect || '/') as TRoutePath;
+    const redirects = this.config.redirects as
+      | Partial<Record<string, TRoutePath>>
+      | undefined;
+
+    if (redirects && redirects[targetUrl]) {
+      targetUrl = redirects[targetUrl]!;
     }
 
-    this.config.router.driver(targetUrl);
+    this.config.router.driver(targetUrl as any);
   }
 }

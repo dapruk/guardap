@@ -1,4 +1,15 @@
-export type RouterDriver = (url: string) => void;
+export type GuardapRoutePath<TPath> = TPath extends string ? TPath : string;
+
+export type GuardapConfigContext<TPathOrContext, TContext> =
+  unknown extends TContext
+    ? TPathOrContext extends string
+      ? any
+      : TPathOrContext
+    : TContext;
+
+export type RouterDriver<TRoutePath extends string = string> = (
+  url: TRoutePath,
+) => void;
 
 export type PermissionValue = string | string[];
 
@@ -13,6 +24,7 @@ export interface IGuardChain<
   TCondition extends string,
   TGroup extends string,
   TData = any,
+  TRoutePath extends string = string,
 > {
   // Method Overloading for strict typing
   requireRole(role: TRole): this;
@@ -28,15 +40,64 @@ export interface IGuardChain<
   require(action: TAction): {
     on: (
       feature: TFeature,
-    ) => IGuardChain<TRole, TFeature, TAction, TCondition, TGroup, TData>;
+    ) => IGuardChain<
+      TRole,
+      TFeature,
+      TAction,
+      TCondition,
+      TGroup,
+      TData,
+      TRoutePath
+    >;
   };
 
   or(): this;
 
-  redirect(to?: string): void;
+  redirect(to?: TRoutePath): void;
 
   allowed(): boolean;
   allowedAsync(): Promise<boolean>;
+}
+
+export interface GuardapRouteMeta<
+  TRole extends string = string,
+  TFeature extends string = string,
+  TAction extends string = string,
+  TCondition extends string = string,
+  TGroup extends string = string,
+  TRoutePath extends string = string,
+> {
+  login?: boolean;
+  guest?: boolean;
+  role?: TRole | readonly TRole[];
+  group?: TGroup | readonly TGroup[];
+  condition?: TCondition;
+  feature?: TFeature;
+  action?: TAction;
+  redirectTo?: TRoutePath;
+}
+
+export interface GuardapGuardLike<
+  TRole extends string,
+  TFeature extends string,
+  TAction extends string,
+  TCondition extends string,
+  TGroup extends string,
+  TData = any,
+  TRoutePath extends string = string,
+  TContext = any,
+> {
+  with(
+    context: TContext,
+  ): IGuardChain<
+    TRole,
+    TFeature,
+    TAction,
+    TCondition,
+    TGroup,
+    TData,
+    TRoutePath
+  >;
 }
 
 export type UserState<
@@ -56,18 +117,24 @@ export interface GuardConfig<
   TCondition extends string,
   TGroup extends string,
   TData = any,
-  TContext = any,
+  TRoutePathOrContext = string,
+  TContext = unknown,
 > {
   resolveAction?: (action: TAction) => string;
   getPermissions: (roles: TRole[]) => PermissionMatrix<TFeature>;
   getUserState: (
-    ctx?: TContext,
+    ctx?: GuardapConfigContext<TRoutePathOrContext, TContext>,
   ) =>
     | UserState<TRole, TCondition, TData>
     | Promise<UserState<TRole, TCondition, TData>>;
-  router?: { driver?: RouterDriver };
-  redirects?: Record<string, string>;
-  defaultRedirect?: string;
+  router?: { driver?: RouterDriver<GuardapRoutePath<TRoutePathOrContext>> };
+  redirects?: Partial<
+    Record<
+      GuardapRoutePath<TRoutePathOrContext>,
+      GuardapRoutePath<TRoutePathOrContext>
+    >
+  >;
+  defaultRedirect?: GuardapRoutePath<TRoutePathOrContext>;
   groups?: Record<TGroup, TRole[]>;
   debug?: boolean;
 }

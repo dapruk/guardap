@@ -1,7 +1,21 @@
 import { GuardBuilder } from './core/guard';
-import type { GuardConfig, UserState } from './core/types';
+import type {
+  GuardapConfigContext,
+  GuardapRoutePath,
+  GuardConfig,
+  UserState,
+} from './core/types';
+export {
+  applyGuardMeta,
+  defineGuardRedirects,
+  evaluateGuardMeta,
+} from './core/meta';
 
 export type {
+  GuardapConfigContext,
+  GuardapGuardLike,
+  GuardapRouteMeta,
+  GuardapRoutePath,
   GuardConfig,
   IGuardChain,
   PermissionMatrix,
@@ -46,7 +60,8 @@ export function createGuard<
   TCondition extends string = string,
   TGroup extends string = string,
   TData = any,
-  TContext = any,
+  TRoutePathOrContext = string,
+  TContext = unknown,
 >(
   config: GuardConfig<
     TRole,
@@ -55,13 +70,17 @@ export function createGuard<
     TCondition,
     TGroup,
     TData,
+    TRoutePathOrContext,
     TContext
   >,
 ) {
   const finalResolveAction = config.resolveAction || defaultResolver;
   const finalConfig = { ...config, resolveAction: finalResolveAction };
 
-  const createBuilder = (ctx?: TContext) => {
+  type TResolvedContext = GuardapConfigContext<TRoutePathOrContext, TContext>;
+  type TResolvedRoutePath = GuardapRoutePath<TRoutePathOrContext>;
+
+  const createBuilder = (ctx?: TResolvedContext) => {
     const userStateOrPromise = finalConfig.getUserState(ctx);
 
     if (userStateOrPromise instanceof Promise) {
@@ -79,7 +98,15 @@ export function createGuard<
         };
       });
 
-      return new GuardBuilder(finalConfig, contextPromise);
+      return new GuardBuilder<
+        TRole,
+        TFeature,
+        TAction,
+        TCondition,
+        TGroup,
+        TData,
+        TResolvedRoutePath
+      >(finalConfig as any, contextPromise);
     }
 
     const userState = userStateOrPromise as UserState<TRole, TCondition, TData>;
@@ -91,7 +118,15 @@ export function createGuard<
     const isAuthenticated =
       userState.isAuthenticated ?? userState.roles.length > 0;
 
-    return new GuardBuilder(finalConfig, {
+    return new GuardBuilder<
+      TRole,
+      TFeature,
+      TAction,
+      TCondition,
+      TGroup,
+      TData,
+      TResolvedRoutePath
+    >(finalConfig as any, {
       roles: userState.roles,
       conditions: userState.conditions,
       permissions,
@@ -107,7 +142,7 @@ export function createGuard<
      *
      * @param context The context object passed to your `getUserState` config.
      */
-    with: (context: TContext) => createBuilder(context),
+    with: (context: TResolvedContext) => createBuilder(context),
 
     /**
      * Checks if the user possesses one of the specified roles.
@@ -162,7 +197,7 @@ export function createGuard<
      * Triggers the configured Router Driver to redirect IF access was denied.
      * @param to (Optional) The target URL or Alias to redirect to. Defaults to `config.defaultRedirect`.
      */
-    redirect: (to?: string) => {
+    redirect: (to?: TResolvedRoutePath) => {
       return createBuilder().redirect(to);
     },
 
@@ -172,7 +207,7 @@ export function createGuard<
      *
      * @returns `true` if allowed, `false` otherwise.
      */
-    can: (action: TAction, feature: TFeature, context?: any) => {
+    can: (action: TAction, feature: TFeature, context?: TResolvedContext) => {
       return createBuilder(context).require(action).on(feature).allowed();
     },
 
