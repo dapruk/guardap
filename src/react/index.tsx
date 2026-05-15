@@ -7,6 +7,7 @@ import {
   type ReactNode,
 } from 'react';
 
+import { applyGuardMeta } from '../core/meta';
 import type { GuardConfig, IGuardChain } from '../core/types';
 import { createGuard as createCoreGuard } from '../index';
 
@@ -52,7 +53,8 @@ export function createGuard<
   TCondition extends string = string,
   TGroup extends string = string,
   TData = any,
-  TContext = any,
+  TRoutePathOrContext = string,
+  TContext = unknown,
 >(
   config: GuardConfig<
     TRole,
@@ -61,6 +63,7 @@ export function createGuard<
     TCondition,
     TGroup,
     TData,
+    TRoutePathOrContext,
     TContext
   >,
 ) {
@@ -238,6 +241,115 @@ export function createGuard<
     GuardProvider,
     useGuard,
     AccessGuard,
+    withAuth,
+  };
+}
+
+export function createReactAccessGuard<
+  TRole extends string,
+  TFeature extends string,
+  TAction extends string,
+  TCondition extends string = string,
+  TGroup extends string = string,
+  TData = any,
+>(guardInstance: any) {
+  const GuardContext = createContext(guardInstance);
+
+  const AccessGuardProvider = ({ children }: { children: ReactNode }) => {
+    return (
+      <GuardContext.Provider value={guardInstance}>
+        {children}
+      </GuardContext.Provider>
+    );
+  };
+
+  const useGuard = () => {
+    const context = useContext(GuardContext);
+    if (!context) {
+      throw new Error('useGuard must be used within AccessGuardProvider');
+    }
+    return context;
+  };
+
+  const AccessGuard = (
+    props: AccessGuardProps<TRole, TFeature, TAction, TCondition, TGroup>,
+  ) => {
+    const {
+      children,
+      fallback = null,
+      loadingComponent = null,
+      suspense = false,
+      ...meta
+    } = props;
+
+    const api = useGuard();
+    const [isAllowed, setIsAllowed] = useState<boolean | null>(null);
+
+    if (suspense) {
+      const key = JSON.stringify(meta);
+      const cached = suspenseCache.get(key);
+
+      if (cached?.result !== undefined) {
+        return cached.result ? <>{children}</> : <>{fallback}</>;
+      }
+
+      if (cached?.promise) {
+        throw cached.promise;
+      }
+
+      try {
+        const result = applyGuardMeta(api, meta).allowed();
+        return result ? <>{children}</> : <>{fallback}</>;
+      } catch (e) {
+        const promise = applyGuardMeta(api, meta)
+          .allowedAsync()
+          .then((result: boolean) => {
+            suspenseCache.set(key, { promise, result });
+            return result;
+          });
+        suspenseCache.set(key, { promise });
+        throw promise;
+      }
+    }
+
+    useEffect(() => {
+      const builder = applyGuardMeta(api, meta);
+
+      try {
+        setIsAllowed(builder.allowed());
+      } catch (e) {
+        builder.allowedAsync().then((result: boolean) => {
+          setIsAllowed(result);
+        });
+      }
+    }, [api, meta]);
+
+    if (isAllowed === null) return <>{loadingComponent || fallback}</>;
+
+    return isAllowed ? <>{children}</> : <>{fallback}</>;
+  };
+
+  function withAuth<P extends object>(
+    Component: ComponentType<P>,
+    options: Omit<
+      AccessGuardProps<TRole, TFeature, TAction, TCondition, TGroup>,
+      'children'
+    >,
+  ) {
+    return function WithAuthWrapper(props: P) {
+      return (
+        <AccessGuard {...options}>
+          <Component {...props} />
+        </AccessGuard>
+      );
+    };
+  }
+
+  return {
+    AccessGuard,
+    AccessGuardProvider,
+    GuardProvider: AccessGuardProvider,
+    useGuard,
     withAuth,
   };
 }
