@@ -61,7 +61,7 @@ Within a branch, checks are ANDed together. Calling `.or()` snapshots a successf
     └── v1-1.test.ts
 ```
 
-There is also a checked-in `dist/` directory containing build output, plus both `package-lock.json` and `pnpm-lock.yaml`.
+There is also a checked-in `dist/` directory containing build output, plus `package-lock.json`.
 
 ## Core Types
 
