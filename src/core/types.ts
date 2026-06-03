@@ -7,9 +7,11 @@ export type GuardapConfigContext<TPathOrContext, TContext> =
       : TPathOrContext
     : TContext;
 
-export type RouterDriver<TRoutePath extends string = string> = (
+export type RouterDriver<TRoutePath extends string = string> = ((
   url: TRoutePath,
-) => void;
+) => void) & {
+  readonly __guardapRoutePath?: TRoutePath;
+};
 
 export type PermissionValue = string | string[];
 

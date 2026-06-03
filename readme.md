@@ -5,24 +5,29 @@ A strictly typed, framework-agnostic authorization library for TypeScript.
 ## Core Values
 
 ### Type Safety Inheritance
+
 Guardap utilizes a generic-first architecture where Roles, Features, Actions, and Conditions are defined once in the configuration and flow seamlessly to logic builders and React props. The entire authorization chain is statically verified, ensuring that invalid roles or actions are caught at compile time.
 
 ### Readable Fluent API
+
 Complex authorization logic is transformed into readable, sequential sentences. The builder pattern supports standard AND logic by default, with branching OR logic available via `.or()`. This approach eliminates nested conditionals and improves code maintainability.
 
 ### Hybrid RBAC & ABAC
+
 The system supports checking static Roles and Groups alongside dynamic boolean Conditions (State-based) within the same chain. It features granular control with Feature-Level Wildcards (`*`), allowing for flexible permission modeling that adapts to complex business rules.
 
 ### React First, Framework Agnostic
+
 The core logic is pure TypeScript, making it Isomorphic and SSR-ready. First-class React bindings are provided, including native support for React Suspense to handle asynchronous authorization states without boilerplate loading logic.
 
 ## Comparison
 
 **Standard Implementation**
+
 ```typescript
 // Manual checks often lead to nested, hard-to-read logic
 if (
-  user.roles.includes('admin') || 
+  user.roles.includes('admin') ||
   (user.roles.includes('staff') && user.conditions.isActive)
 ) {
   return <AdminPanel />;
@@ -30,6 +35,7 @@ if (
 ```
 
 **Guardap Implementation**
+
 ```typescript
 // Fluent, readable, and type-safe
 if (
@@ -94,20 +100,20 @@ const AccessGuard = createGuard<
   // This can return a direct object OR a Promise
   getUserState: async () => {
     // Example: Fetch from session or context
-    const session = await fetchSession(); 
+    const session = await fetchSession();
     return {
       roles: session.roles,
-      conditions: { 
+      conditions: {
         isVerified: session.emailVerified,
-        hasSubscription: !!session.subId 
+        hasSubscription: !!session.subId,
       },
       // Explicit auth flag (optional, defaults to roles.length > 0)
       isAuthenticated: !!session.user,
     };
   },
-  
+
   // Optional: Custom Action Resolver (Default: first char, e.g. 'create' -> 'c')
-  resolveAction: (action) => action[0], 
+  resolveAction: (action) => action[0],
 
   // Optional: Enable Debug Mode to log permission rejections to console
   debug: true,
@@ -122,14 +128,17 @@ const AccessGuard = createGuard<
 The `AccessGuard` instance provides a fluent builder for checking permissions.
 
 **Synchronous Checks (Client)**
+
 ```typescript
 // Uses default/global state
 const isAllowed = AccessGuard.requireRole('admin')
-  .require('create').on('posts')
+  .require('create')
+  .on('posts')
   .allowed();
 ```
 
 **Asynchronous Checks (Server)**
+
 ```typescript
 // Injects request context
 const isAllowed = await AccessGuard.with(context)
@@ -138,11 +147,12 @@ const isAllowed = await AccessGuard.with(context)
 ```
 
 **Complex Logic (.or)**
+
 ```typescript
-AccessGuard.requireRole('admin')    // Check A
-  .or()                       // OR
-  .requireRole('editor')      // (Check B
-  .mustBe('isVerified')       //  AND Check C)
+AccessGuard.requireRole('admin') // Check A
+  .or() // OR
+  .requireRole('editor') // (Check B
+  .mustBe('isVerified') //  AND Check C)
   .allowed();
 ```
 
@@ -163,7 +173,9 @@ In SSR or Middleware (Node/Next.js), state is request-scoped. Use `.with(context
 
 ```typescript
 // Config: getUserState(ctx) uses the passed context
-const isAllowed = await AccessGuard.with(req).requireRole('admin').allowedAsync();
+const isAllowed = await AccessGuard.with(req)
+  .requireRole('admin')
+  .allowedAsync();
 ```
 
 ### The Fluent API
@@ -178,17 +190,18 @@ The `IGuardChain` interface provides a readable, sentence-like API.
 | `guestOnly()` | Enforces that the user is NOT authenticated. |
 | `mustBe(condition)` | Checks a custom boolean condition defined in `getUserState`. |
 | `require(action).on(feature)` | Checks specific permission. Supports wildcards (`*`). |
-| `.or()` | **Logic Switcher**. Snapshots the current chain result and resets for a new branch. (A || B). |
+| `.or()` | **Logic Switcher**. Snapshots the current chain result and resets for a new branch. (A OR B). |
 | `.allowed()` | **Terminal**. Returns `boolean`. Throws error if the chain is async. |
 | `.allowedAsync()` | **Terminal**. Returns `Promise<boolean>`. Works for both sync and async chains. |
-| `.redirect(to?)` | **Terminal**. Triggers the configured router driver if access is denied. The `to` argument can be typed with an app route union. |
+| `.redirect(to?)` | **Terminal**. Triggers the configured router driver if access is denied. The `to` argument can be typed from router routes. |
 
 **Example: Branching Logic**
+
 ```typescript
-AccessGuard.requireRole('admin')    // Branch 1
-  .or()                       // OR
-  .requireRole('editor')      // Branch 2 (Start)
-  .mustBe('isVerified')       // Branch 2 (Continue - AND)
+AccessGuard.requireRole('admin') // Branch 1
+  .or() // OR
+  .requireRole('editor') // Branch 2 (Start)
+  .mustBe('isVerified') // Branch 2 (Continue - AND)
   .allowed();
 ```
 
@@ -197,22 +210,25 @@ AccessGuard.requireRole('admin')    // Branch 1
 Guardap provides a powerful React adapter with full TypeScript support.
 
 **1. Create the Instance**
+
 ```typescript
 // src/guard.ts
 import { createGuard } from 'guardap/react';
 
 // Create your guard and export the bound components
-export const { GuardProvider, AccessGuard, useGuard, withAuth } = createGuard(config);
+export const { GuardProvider, AccessGuard, useGuard, withAuth } =
+  createGuard(config);
 ```
 
 **2. Wrap your App**
+
 ```tsx
 // src/App.tsx
 import { GuardProvider } from './guard';
 
 <GuardProvider>
   <AppContent />
-</GuardProvider>
+</GuardProvider>;
 ```
 
 **3. Protect Components (AccessGuard)**
@@ -221,7 +237,7 @@ The `AccessGuard` component accepts props that mirror the fluent API. All props 
 ```tsx
 <AccessGuard
   role={['admin', 'editor']} // OR logic within role array
-  condition="isVerified"     // AND condition
+  condition="isVerified" // AND condition
   fallback={<ForbiddenPage />}
   loadingComponent={<Spinner />} // Shown during async checks
 >
@@ -252,41 +268,39 @@ Enable `suspense={true}` to let a parent `<Suspense>` boundary handle the loadin
 Guardap comes with built-in drivers for popular routers.
 
 **React Router (v6+)**
+
 ```typescript
 import { useNavigate } from 'react-router-dom';
 import {
   createReactRouterDriver,
-  defineReactRouterPaths,
+  defineReactRouterRoutes,
 } from 'guardap/drivers/react-router';
 import type { ReactRouterGuardHandle } from 'guardap/drivers/react-router';
 
-const routePaths = defineReactRouterPaths([
-  '/',
-  '/login',
-  '/dashboard',
-  '/posts',
-  '/posts/:postId',
+const routes = defineReactRouterRoutes([
+  {
+    path: '/',
+    children: [
+      { index: true },
+      { path: 'login' },
+      { path: 'dashboard' },
+      { path: 'posts' },
+      { path: 'posts/:postId' },
+    ],
+  },
 ] as const);
-
-type AppRoutePath = (typeof routePaths)[number];
 
 // Inside your component/hook
 const navigate = useNavigate();
 
-const AccessGuard = createGuard<
-  AppRole,
-  AppFeature,
-  AppAction,
-  AppCondition,
-  AppGroup,
-  unknown,
-  AppRoutePath
->({
+const AccessGuard = createGuard({
   // ... config
   router: {
-    driver: createReactRouterDriver<AppRoutePath>(navigate),
+    driver: createReactRouterDriver(navigate, routes),
   },
   defaultRedirect: '/login',
+  getPermissions: (roles: AppRole[]) => ({ posts: 'r' }),
+  getUserState: () => ({ roles: [] as AppRole[], conditions: {} }),
 });
 
 AccessGuard.requireLogin().redirect('/login'); // ok
@@ -306,35 +320,47 @@ const postsRoute = {
     AppFeature,
     AppAction,
     AppCondition,
-    AppGroup,
-    AppRoutePath
+    AppGroup
   >,
 };
 ```
 
 **TanStack Router**
+
 ```typescript
-import { createFileRoute } from '@tanstack/react-router';
-import { TanStackDriver } from 'guardap/drivers/tanstack';
+import {
+  createFileRoute,
+  createRootRoute,
+  createRoute,
+  createRouter,
+} from '@tanstack/react-router';
+import { createTanStackRouterDriver } from 'guardap/drivers/tanstack';
 import type { TanStackGuardStaticData } from 'guardap/drivers/tanstack';
 
-type AppRoutePath = '/' | '/login' | '/dashboard' | '/posts' | '/posts/$postId';
+const rootRoute = createRootRoute();
+const loginRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/login',
+});
+const postsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/posts',
+});
+const routeTree = rootRoute.addChildren([loginRoute, postsRoute]);
+const router = createRouter({ routeTree });
 
-const AccessGuard = createGuard<
-  AppRole,
-  AppFeature,
-  AppAction,
-  AppCondition,
-  AppGroup,
-  unknown,
-  AppRoutePath
->({
+const AccessGuard = createGuard({
   // ... config
   router: {
-    driver: TanStackDriver,
+    driver: createTanStackRouterDriver(router),
   },
   defaultRedirect: '/login',
+  getPermissions: (roles: AppRole[]) => ({ posts: 'r' }),
+  getUserState: () => ({ roles: [] as AppRole[], conditions: {} }),
 });
+
+AccessGuard.requireLogin().redirect('/posts'); // ok
+// AccessGuard.requireLogin().redirect('/wrong-path'); // type error
 
 export const Route = createFileRoute('/posts')({
   staticData: {
@@ -348,8 +374,7 @@ export const Route = createFileRoute('/posts')({
     AppFeature,
     AppAction,
     AppCondition,
-    AppGroup,
-    AppRoutePath
+    AppGroup
   >,
   component: PostsPage,
 });
@@ -361,24 +386,22 @@ For strict redirect map keys and values, use the shared helper:
 
 ```typescript
 import { defineGuardRedirects } from 'guardap';
+import type { ReactRouterRoutePaths } from 'guardap/drivers/react-router';
 
-const redirects = defineGuardRedirects<AppRoutePath>()({
+const redirects = defineGuardRedirects<ReactRouterRoutePaths<typeof routes>>()({
   '/': '/dashboard',
   '/posts': '/login',
 });
 
-createGuard<
-  AppRole,
-  AppFeature,
-  AppAction,
-  AppCondition,
-  AppGroup,
-  unknown,
-  AppRoutePath
->({
+createGuard({
   // ... config
   defaultRedirect: '/login',
   redirects,
+  router: {
+    driver: createReactRouterDriver(navigate, routes),
+  },
+  getPermissions: (roles: AppRole[]) => ({ posts: 'r' }),
+  getUserState: () => ({ roles: [] as AppRole[], conditions: {} }),
 });
 ```
 
@@ -403,7 +426,7 @@ const AccessGuard = createGuard({
   router: {
     driver: (url) => {
       // Your custom redirect logic
-      window.location.href = url; 
+      window.location.href = url;
     },
   },
 });

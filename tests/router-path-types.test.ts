@@ -1,6 +1,15 @@
+import {
+  createRootRoute,
+  createRoute,
+  createRouter,
+} from '@tanstack/react-router';
 import { describe, expect, it } from 'vitest';
 import { createGuard, defineGuardRedirects, type GuardConfig } from '../src';
-import { createReactRouterDriver } from '../src/drivers/react-router';
+import {
+  createReactRouterDriver,
+  defineReactRouterRoutes,
+} from '../src/drivers/react-router';
+import { createTanStackRouterDriver } from '../src/drivers/tanstack';
 
 type Roles = 'admin';
 type Features = 'posts';
@@ -93,5 +102,68 @@ describe('typed redirect paths', () => {
     Guard.requireLogin().redirect('/wrong-path');
 
     expect(true).toBe(true);
+  });
+
+  it('infers redirect paths from React Router route objects', () => {
+    const routes = defineReactRouterRoutes([
+      {
+        path: '/',
+        children: [
+          { index: true },
+          { path: 'login' },
+          { path: 'posts/:postId' },
+        ],
+      },
+      { path: '/settings' },
+    ] as const);
+
+    const Guard = createGuard({
+      defaultRedirect: '/login',
+      router: {
+        driver: createReactRouterDriver(() => {}, routes),
+      },
+      getPermissions: (_roles: Roles[]) => ({ posts: 'r' }),
+      getUserState: () => ({ roles: [] as Roles[], conditions: {} }),
+    });
+
+    Guard.requireLogin().redirect('/posts/:postId');
+    Guard.requireLogin().redirect('/settings');
+
+    // @ts-expect-error - redirect paths are inferred from the route objects.
+    Guard.requireLogin().redirect('/wrong-path');
+
+    expect(routes[0].children[2].path).toBe('posts/:postId');
+  });
+
+  it('infers redirect paths from a TanStack router', () => {
+    const rootRoute = createRootRoute();
+    const loginRoute = createRoute({
+      getParentRoute: () => rootRoute,
+      path: '/login',
+    });
+    const postsRoute = createRoute({
+      getParentRoute: () => rootRoute,
+      path: '/posts',
+    });
+    const routeTree = rootRoute.addChildren([loginRoute, postsRoute]);
+    const router = createRouter({ routeTree });
+
+    const Guard = createGuard({
+      defaultRedirect: '/login',
+      router: {
+        driver: createTanStackRouterDriver(router),
+      },
+      getPermissions: (_roles: Roles[]) => ({ posts: 'r' }),
+      getUserState: () => ({ roles: [] as Roles[], conditions: {} }),
+    });
+
+    expect(() => Guard.requireLogin().redirect('/posts')).toThrow();
+
+    if (false) {
+      // @ts-expect-error - redirect paths are inferred from the TanStack route tree.
+      Guard.requireLogin().redirect('/wrong-path');
+    }
+
+    expect(router.routeTree).toBe(routeTree);
   });
 });
