@@ -2,6 +2,7 @@
   "name": "guardap",
   "version": "1.2.0",
   "description": "Fluent & isomorphic access control library",
+  "packageManager": "npm@11.14.1",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",

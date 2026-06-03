@@ -51,8 +51,6 @@ if (
 
 ```bash
 npm install guardap
-# or
-pnpm add guardap
 ```
 
 ### Core Configuration
@@ -417,7 +415,7 @@ We welcome contributions! Please follow these steps:
 
 1.  **Fork** the repository.
 2.  **Clone** your fork: `git clone https://github.com/your-username/guardap.git`
-3.  **Install dependencies**: `pnpm install`
+3.  **Install dependencies**: `npm install`
 4.  **Create a branch**: `git checkout -b feature/my-new-feature`
 5.  **Make changes** and run tests: `npm test`
 6.  **Commit** your changes: `git commit -m 'Add some feature'`
