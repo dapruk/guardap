@@ -59,6 +59,24 @@ if (
 npm install guardap
 ```
 
+### Generate a Config
+
+Guardap is config-heavy by design, so the CLI can create a starter file for you:
+
+```bash
+npx guardap init
+```
+
+The interactive flow asks for a config template, optional router wiring, and the output path. By default it writes `src/guard.ts` when a `src/` directory exists, otherwise `guard.ts`. Existing files are never overwritten unless you pass `--force`.
+
+For non-interactive setup:
+
+```bash
+npx guardap init --template react --router react-router
+npx guardap init --template core --target lib/guard.ts
+npx guardap init --yes
+```
+
 ### Core Configuration
 
 The `createGuard` factory is the entry point. It accepts generic types to enforce strict type safety across your application, including an optional route-path union for typed redirects.
@@ -182,18 +200,18 @@ const isAllowed = await AccessGuard.with(req)
 
 The `IGuardChain` interface provides a readable, sentence-like API.
 
-| Method | Description |
-| :--- | :--- |
-| `requireRole(role)` | Checks if user has a specific role (or one of an array of roles). |
-| `requireGroup(group)` | Checks if user belongs to a configured group. |
-| `requireLogin()` | Enforces that the user is authenticated. |
-| `guestOnly()` | Enforces that the user is NOT authenticated. |
-| `mustBe(condition)` | Checks a custom boolean condition defined in `getUserState`. |
-| `require(action).on(feature)` | Checks specific permission. Supports wildcards (`*`). |
-| `.or()` | **Logic Switcher**. Snapshots the current chain result and resets for a new branch. (A OR B). |
-| `.allowed()` | **Terminal**. Returns `boolean`. Throws error if the chain is async. |
-| `.allowedAsync()` | **Terminal**. Returns `Promise<boolean>`. Works for both sync and async chains. |
-| `.redirect(to?)` | **Terminal**. Triggers the configured router driver if access is denied. The `to` argument can be typed from router routes. |
+| Method                        | Description                                                                                                                 |
+| :---------------------------- | :-------------------------------------------------------------------------------------------------------------------------- |
+| `requireRole(role)`           | Checks if user has a specific role (or one of an array of roles).                                                           |
+| `requireGroup(group)`         | Checks if user belongs to a configured group.                                                                               |
+| `requireLogin()`              | Enforces that the user is authenticated.                                                                                    |
+| `guestOnly()`                 | Enforces that the user is NOT authenticated.                                                                                |
+| `mustBe(condition)`           | Checks a custom boolean condition defined in `getUserState`.                                                                |
+| `require(action).on(feature)` | Checks specific permission. Supports wildcards (`*`).                                                                       |
+| `.or()`                       | **Logic Switcher**. Snapshots the current chain result and resets for a new branch. (A OR B).                               |
+| `.allowed()`                  | **Terminal**. Returns `boolean`. Throws error if the chain is async.                                                        |
+| `.allowedAsync()`             | **Terminal**. Returns `Promise<boolean>`. Works for both sync and async chains.                                             |
+| `.redirect(to?)`              | **Terminal**. Triggers the configured router driver if access is denied. The `to` argument can be typed from router routes. |
 
 **Example: Branching Logic**
 

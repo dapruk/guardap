@@ -6,6 +6,9 @@
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
+  "bin": {
+    "guardap": "./dist/cli.js"
+  },
   "publishConfig": {
     "access": "public",
     "tag": "latest"
@@ -73,6 +76,7 @@
   "devDependencies": {
     "@tanstack/react-router": "^1.170.11",
     "@testing-library/react": "^16.3.2",
+    "@types/node": "^25.9.1",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "jsdom": "^27.4.0",
