@@ -1,6 +1,6 @@
 {
   "name": "guardap",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "Fluent & isomorphic access control library",
   "packageManager": "npm@11.14.1",
   "main": "./dist/index.js",
